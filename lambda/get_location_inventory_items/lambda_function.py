@@ -7,7 +7,7 @@ from boto3.dynamodb.conditions import Key
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table('Inventory')
 
-# GSI name - assumes the GSI has location_id as partition key and id as sort key
+# GSI name - location_id as partition key and id as sort key
 GSI_NAME = 'location_id-id-index'
 
 
@@ -22,20 +22,13 @@ class DecimalEncoder(json.JSONEncoder):
 def lambda_handler(event, context):
     """
     Lambda function to retrieve all inventory items in a specific location.
-    Uses the Global Secondary Index (GSI) with reversed PK/SK for efficient querying.
-    
+    Uses the Global Secondary Index (GSI) for efficient querying.
     API Endpoint: GET /location/{id}
-    
-    Path Parameters:
-        id (integer): The location ID to query.
-    
-    Returns:
-        dict: Response containing all items in the specified location or error message.
     """
     try:
         # Extract the location ID from path parameters
         location_id = event.get('pathParameters', {}).get('id')
-        
+
         if not location_id:
             return {
                 'statusCode': 400,
@@ -47,7 +40,7 @@ def lambda_handler(event, context):
                     'message': 'Missing location ID in path parameters'
                 })
             }
-        
+
         # Convert location_id to integer
         try:
             location_id = int(location_id)
@@ -62,15 +55,15 @@ def lambda_handler(event, context):
                     'message': 'Location ID must be an integer'
                 })
             }
-        
+
         # Query the GSI to get all items in this location
         response = table.query(
             IndexName=GSI_NAME,
             KeyConditionExpression=Key('location_id').eq(location_id)
         )
-        
+
         items = response.get('Items', [])
-        
+
         # Handle pagination if there are more items
         while 'LastEvaluatedKey' in response:
             response = table.query(
@@ -79,7 +72,7 @@ def lambda_handler(event, context):
                 ExclusiveStartKey=response['LastEvaluatedKey']
             )
             items.extend(response.get('Items', []))
-        
+
         return {
             'statusCode': 200,
             'headers': {
@@ -93,7 +86,7 @@ def lambda_handler(event, context):
                 'items': items
             }, cls=DecimalEncoder)
         }
-        
+
     except Exception as e:
         return {
             'statusCode': 500,

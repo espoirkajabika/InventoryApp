@@ -18,22 +18,18 @@ class DecimalEncoder(json.JSONEncoder):
 def lambda_handler(event, context):
     """
     Lambda function to retrieve all inventory items from DynamoDB.
-    
     API Endpoint: GET /item
-    
-    Returns:
-        dict: Response containing all inventory items or error message.
     """
     try:
         # Scan the table to get all items
         response = table.scan()
         items = response.get('Items', [])
-        
+
         # Handle pagination if there are more items
         while 'LastEvaluatedKey' in response:
             response = table.scan(ExclusiveStartKey=response['LastEvaluatedKey'])
             items.extend(response.get('Items', []))
-        
+
         return {
             'statusCode': 200,
             'headers': {
@@ -46,7 +42,7 @@ def lambda_handler(event, context):
                 'items': items
             }, cls=DecimalEncoder)
         }
-        
+
     except Exception as e:
         return {
             'statusCode': 500,

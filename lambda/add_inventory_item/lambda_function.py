@@ -1,7 +1,7 @@
 import json
 import boto3
 from decimal import Decimal
-import ulid
+import uuid
 
 # Initialize DynamoDB resource
 dynamodb = boto3.resource('dynamodb')
@@ -19,18 +19,7 @@ class DecimalEncoder(json.JSONEncoder):
 def lambda_handler(event, context):
     """
     Lambda function to add a new inventory item to DynamoDB.
-    
     API Endpoint: POST /item
-    
-    Request Body:
-        name (string): Name of the item.
-        description (string): Description of the item.
-        qty_on_hand (integer): Quantity on hand.
-        price (float): Price of the item.
-        location_id (integer): Location ID where item is stored.
-    
-    Returns:
-        dict: Response containing the created item or error message.
     """
     try:
         # Parse the request body
@@ -38,11 +27,11 @@ def lambda_handler(event, context):
             body = json.loads(event.get('body', '{}'))
         else:
             body = event.get('body', {})
-        
+
         # Validate required fields
         required_fields = ['name', 'description', 'qty_on_hand', 'price', 'location_id']
         missing_fields = [field for field in required_fields if field not in body]
-        
+
         if missing_fields:
             return {
                 'statusCode': 400,
@@ -54,10 +43,10 @@ def lambda_handler(event, context):
                     'message': f'Missing required fields: {", ".join(missing_fields)}'
                 })
             }
-        
-        # Generate a new ULID for the item
-        item_id = str(ulid.new())
-        
+
+        # Generate a new UUID for the item
+        item_id = str(uuid.uuid4())
+
         # Create the item object
         item = {
             'id': item_id,
@@ -67,10 +56,10 @@ def lambda_handler(event, context):
             'price': Decimal(str(body['price'])),
             'location_id': int(body['location_id'])
         }
-        
+
         # Put the item into DynamoDB
         table.put_item(Item=item)
-        
+
         return {
             'statusCode': 201,
             'headers': {
@@ -82,7 +71,7 @@ def lambda_handler(event, context):
                 'item': item
             }, cls=DecimalEncoder)
         }
-        
+
     except json.JSONDecodeError:
         return {
             'statusCode': 400,
